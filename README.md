@@ -127,7 +127,7 @@ If you enable Reddit integration:
 
 > You are responsible for your API credentials and for complying with [Reddit's Developer Terms](https://www.redditinc.com/policies/developer-terms).
 
-Misuse (e.g., excessive requests, abuse of endpoints) can result in your credentials being rate-limited or banned. The developer is **not responsible** for actions Reddit may take against individual misuse.
+Misuse (e.g., excessive requests, abuse of endpoints) can result in your credentials being rate-limited or banned. I am **not responsible** for actions Reddit may take against individual misuse.
 
 ---
 
