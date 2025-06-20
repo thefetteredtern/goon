@@ -1,0 +1,467 @@
+/**
+ * Goon - Storage Module
+ * Handles loading and saving settings to server storage
+ */
+
+import { GoonApp, AppState } from './core.js';
+
+/**
+ * Storage Module - Handles loading and saving settings
+ */
+GoonApp.Storage = {
+    /**
+     * Load settings from server-side storage
+     * @returns {Promise<void>}
+     */
+    loadFromStorage: async function() {
+        try {
+            console.log('Loading settings from server...');
+            
+            // Show loading indicator
+            if (GoonApp.UI.showLoading) {
+                GoonApp.UI.showLoading();
+            }
+            
+            // Try to load from localStorage first as a fallback
+            const localSettings = localStorage.getItem('goonAppSettings');
+            if (localSettings) {
+                try {
+                    const parsedSettings = JSON.parse(localSettings);
+                    console.log('Found settings in localStorage:', parsedSettings);
+                    // We'll apply these if server fetch fails
+                }
+                catch (e) {
+                    console.warn('Failed to parse localStorage settings:', e);
+                }
+            }
+            
+            // Fetch settings from server
+            const response = await fetch('/load_settings');
+            
+            if (!response.ok) {
+                throw new Error(`Failed to load settings: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            console.log('Settings loaded successfully');
+            
+            // Check if we have settings in the response
+            const settings = data.settings || data;
+            console.log('Parsed settings from response:', settings);
+            
+            // Update AppState with loaded settings
+            if (settings.favorites && Array.isArray(settings.favorites)) {
+                AppState.subreddits.favorites = settings.favorites;
+            }
+            
+            if (settings.punishments && Array.isArray(settings.punishments)) {
+                AppState.subreddits.punishments = settings.punishments;
+            }
+            
+            // Load content source
+            if (settings.contentSource) {
+                AppState.settings.contentSource = settings.contentSource;
+            }
+            
+            // Load punishments enabled setting
+            if (settings.punishmentsEnabled !== undefined) {
+                AppState.settings.punishmentsEnabled = settings.punishmentsEnabled;
+            }
+            
+            // Load auto cycle settings
+            if (settings.autoCycleEnabled !== undefined) {
+                AppState.settings.autoCycleEnabled = settings.autoCycleEnabled;
+            }
+            
+            if (settings.autoCycleInterval) {
+                AppState.settings.autoCycleInterval = settings.autoCycleInterval;
+            }
+            
+            // Load video timer soft limit setting
+            if (settings.videoTimerSoftLimitEnabled !== undefined) {
+                AppState.settings.videoTimerSoftLimitEnabled = settings.videoTimerSoftLimitEnabled;
+            }
+            
+            // Load theme
+            if (settings.theme) {
+                AppState.settings.theme = settings.theme;
+                // Apply theme to document
+                document.documentElement.setAttribute('data-bs-theme', settings.theme);
+            }
+            
+            // Load timer settings
+            if (settings.timerMin !== undefined) {
+                AppState.settings.timerMin = settings.timerMin;
+                console.log('Loaded timerMin:', settings.timerMin);
+            }
+            
+            if (settings.timerMax !== undefined) {
+                AppState.settings.timerMax = settings.timerMax;
+                console.log('Loaded timerMax:', settings.timerMax);
+            }
+            
+            if (settings.metronomeSpeed !== undefined) {
+                AppState.settings.metronomeSpeed = settings.metronomeSpeed;
+                console.log('Loaded metronomeSpeed:', settings.metronomeSpeed);
+            }
+            
+            // Load sound settings
+            if (settings.soundEnabled !== undefined) {
+                AppState.settings.soundEnabled = settings.soundEnabled;
+                localStorage.setItem('soundEnabled', settings.soundEnabled);
+                console.log('Loaded soundEnabled:', settings.soundEnabled);
+            }
+            
+            // Load enabled folders
+            if (settings.enabledContentFolders && Array.isArray(settings.enabledContentFolders)) {
+                AppState.settings.enabledContentFolders = settings.enabledContentFolders;
+            }
+            
+            if (settings.enabledPunishmentFolders && Array.isArray(settings.enabledPunishmentFolders)) {
+                AppState.settings.enabledPunishmentFolders = settings.enabledPunishmentFolders;
+            }
+            
+            // Load Reddit credentials
+            if (settings.redditCredentials) {
+                AppState.settings.redditCredentials = settings.redditCredentials;
+            }
+            
+            // Load stats
+            if (settings.stats) {
+                if (settings.stats.favoritesCompletedCount !== undefined) {
+                    AppState.stats.favoritesCompletedCount = settings.stats.favoritesCompletedCount;
+                }
+                
+                if (settings.stats.punishmentsCompletedCount !== undefined) {
+                    AppState.stats.punishmentsCompletedCount = settings.stats.punishmentsCompletedCount;
+                }
+            } else {
+                // Handle case where stats are directly in the settings object
+                if (settings.favoritesCompletedCount !== undefined) {
+                    AppState.stats.favoritesCompletedCount = settings.favoritesCompletedCount;
+                }
+                
+                if (settings.punishmentsCompletedCount !== undefined) {
+                    AppState.stats.punishmentsCompletedCount = settings.punishmentsCompletedCount;
+                }
+            }
+            
+            // Update UI based on loaded settings
+            if (GoonApp.UI.updateContentSourceUI) {
+                GoonApp.UI.updateContentSourceUI();
+            }
+            
+            if (GoonApp.UI.updatePunishmentsEnabledUI) {
+                GoonApp.UI.updatePunishmentsEnabledUI(AppState.settings.punishmentsEnabled);
+            }
+            
+            if (GoonApp.UI.updateAutoCycleUI) {
+                GoonApp.UI.updateAutoCycleUI();
+            }
+            
+            // Update timer and metronome settings UI
+            if (GoonApp.UI.updateTimerSettingsUI) {
+                GoonApp.UI.updateTimerSettingsUI();
+            }
+            
+            // Apply theme to document
+            if (AppState.settings.theme) {
+                document.documentElement.setAttribute('data-bs-theme', AppState.settings.theme);
+            }
+            
+            // Save the loaded settings back to localStorage for persistence
+            this.saveToStorage();
+            
+            return data;
+        } catch (error) {
+            console.error('Error loading settings from server:', error);
+            
+            // Try to load from localStorage as a fallback
+            const localSettings = localStorage.getItem('goonAppSettings');
+            if (localSettings) {
+                try {
+                    const parsedSettings = JSON.parse(localSettings);
+                    console.log('Loading settings from localStorage as fallback');
+                    
+                    // Update AppState with localStorage settings
+                    if (parsedSettings.favorites && Array.isArray(parsedSettings.favorites)) {
+                        AppState.subreddits.favorites = parsedSettings.favorites;
+                    }
+                    
+                    if (parsedSettings.punishments && Array.isArray(parsedSettings.punishments)) {
+                        AppState.subreddits.punishments = parsedSettings.punishments;
+                    }
+                    
+                    // Load content source
+                    if (parsedSettings.contentSource) {
+                        AppState.settings.contentSource = parsedSettings.contentSource;
+                    }
+                    
+                    // Load punishments enabled setting
+                    if (parsedSettings.punishmentsEnabled !== undefined) {
+                        AppState.settings.punishmentsEnabled = parsedSettings.punishmentsEnabled;
+                    }
+                    
+                    // Load auto cycle settings
+                    if (parsedSettings.autoCycleEnabled !== undefined) {
+                        AppState.settings.autoCycleEnabled = parsedSettings.autoCycleEnabled;
+                    }
+                    
+                    if (parsedSettings.autoCycleInterval) {
+                        AppState.settings.autoCycleInterval = parsedSettings.autoCycleInterval;
+                    }
+                    
+                    // Load theme
+                    if (parsedSettings.theme) {
+                        AppState.settings.theme = parsedSettings.theme;
+                        document.documentElement.setAttribute('data-bs-theme', parsedSettings.theme);
+                    }
+                    
+                    // Load timer settings
+                    if (parsedSettings.timerMin !== undefined) {
+                        AppState.settings.timerMin = parsedSettings.timerMin;
+                    }
+                    
+                    if (parsedSettings.timerMax !== undefined) {
+                        AppState.settings.timerMax = parsedSettings.timerMax;
+                    }
+                    
+                    if (parsedSettings.metronomeSpeed !== undefined) {
+                        AppState.settings.metronomeSpeed = parsedSettings.metronomeSpeed;
+                    }
+                    
+                    // Load sound settings
+                    if (parsedSettings.soundEnabled !== undefined) {
+                        AppState.settings.soundEnabled = parsedSettings.soundEnabled;
+                        localStorage.setItem('soundEnabled', parsedSettings.soundEnabled);
+                    }
+                    
+                    // Load enabled folders
+                    if (parsedSettings.enabledContentFolders && Array.isArray(parsedSettings.enabledContentFolders)) {
+                        AppState.settings.enabledContentFolders = parsedSettings.enabledContentFolders;
+                    }
+                    
+                    if (parsedSettings.enabledPunishmentFolders && Array.isArray(parsedSettings.enabledPunishmentFolders)) {
+                        AppState.settings.enabledPunishmentFolders = parsedSettings.enabledPunishmentFolders;
+                    }
+                    
+                    // Load Reddit credentials
+                    if (parsedSettings.redditCredentials) {
+                        AppState.settings.redditCredentials = parsedSettings.redditCredentials;
+                    }
+                    
+                    console.log('Successfully loaded settings from localStorage');
+                    return { settings: parsedSettings };
+                }
+                catch (e) {
+                    console.error('Failed to load settings from localStorage:', e);
+                }
+            }
+            
+            // Show error message if UI module is loaded
+            if (GoonApp.UI.showError) {
+                GoonApp.UI.showError(`Failed to load settings: ${error.message}`);
+            } else {
+                alert(`Failed to load settings: ${error.message}`);
+            }
+            
+            return null;
+        }
+    },
+    },
+    
+    /**
+     * Save settings to server-side storage
+     * @returns {Promise<boolean>} Success status
+     */
+    saveToStorage: async function() {
+        try {
+            console.log('Saving settings to server...');
+            
+            // Prepare settings object
+            const settings = {
+                favorites: AppState.subreddits.favorites,
+                punishments: AppState.subreddits.punishments,
+                contentSource: AppState.settings.contentSource,
+                punishmentsEnabled: AppState.settings.punishmentsEnabled,
+                autoCycleEnabled: AppState.settings.autoCycleEnabled,
+                autoCycleInterval: AppState.settings.autoCycleInterval,
+                theme: AppState.settings.theme,
+                redditCredentials: AppState.settings.redditCredentials,
+                
+                // Timer and metronome settings
+                timerMin: AppState.settings.timerMin || 30,
+                timerMax: AppState.settings.timerMax || 120,
+                
+                if (parsedSettings.punishments && Array.isArray(parsedSettings.punishments)) {
+                    AppState.subreddits.punishments = parsedSettings.punishments;
+                }
+                
+                // Load content source
+                if (parsedSettings.contentSource) {
+                    AppState.settings.contentSource = parsedSettings.contentSource;
+                }
+                
+                // Load punishments enabled setting
+                if (parsedSettings.punishmentsEnabled !== undefined) {
+                    AppState.settings.punishmentsEnabled = parsedSettings.punishmentsEnabled;
+                }
+                
+                // Load auto cycle settings
+                if (parsedSettings.autoCycleEnabled !== undefined) {
+                    AppState.settings.autoCycleEnabled = parsedSettings.autoCycleEnabled;
+                }
+                
+                if (parsedSettings.autoCycleInterval) {
+                    AppState.settings.autoCycleInterval = parsedSettings.autoCycleInterval;
+                }
+                
+                // Load theme
+                if (parsedSettings.theme) {
+                    AppState.settings.theme = parsedSettings.theme;
+                    document.documentElement.setAttribute('data-bs-theme', parsedSettings.theme);
+                }
+                
+                // Load timer settings
+                if (parsedSettings.timerMin !== undefined) {
+                    AppState.settings.timerMin = parsedSettings.timerMin;
+                }
+                
+                if (parsedSettings.timerMax !== undefined) {
+                    AppState.settings.timerMax = parsedSettings.timerMax;
+                }
+                
+                if (parsedSettings.metronomeSpeed !== undefined) {
+                    AppState.settings.metronomeSpeed = parsedSettings.metronomeSpeed;
+                }
+                
+                // Load sound settings
+                if (parsedSettings.soundEnabled !== undefined) {
+                    AppState.settings.soundEnabled = parsedSettings.soundEnabled;
+                    localStorage.setItem('soundEnabled', parsedSettings.soundEnabled);
+                }
+                
+                // Load enabled folders
+                if (parsedSettings.enabledContentFolders && Array.isArray(parsedSettings.enabledContentFolders)) {
+                    AppState.settings.enabledContentFolders = parsedSettings.enabledContentFolders;
+                }
+                
+                if (parsedSettings.enabledPunishmentFolders && Array.isArray(parsedSettings.enabledPunishmentFolders)) {
+                    AppState.settings.enabledPunishmentFolders = parsedSettings.enabledPunishmentFolders;
+                }
+                
+                // Load Reddit credentials
+                if (parsedSettings.redditCredentials) {
+                    AppState.settings.redditCredentials = parsedSettings.redditCredentials;
+                }
+                
+                console.log('Successfully loaded settings from localStorage');
+                return { settings: parsedSettings };
+            }
+            catch (e) {
+                console.error('Failed to load settings from localStorage:', e);
+            }
+        }
+        
+        // Show error message if UI module is loaded
+        if (GoonApp.UI.showError) {
+            GoonApp.UI.showError(`Failed to load settings: ${error.message}`);
+        } else {
+            alert(`Failed to load settings: ${error.message}`);
+        }
+        
+        return null;
+    }
+},
+/**
+ * Save settings to server-side storage
+ * @returns {Promise<boolean>} Success status
+ */
+saveToStorage: async function() {
+    try {
+        console.log('Saving settings to server...');
+        
+        // Prepare settings object
+        const settings = {
+            favorites: AppState.subreddits.favorites,
+            punishments: AppState.subreddits.punishments,
+            contentSource: AppState.settings.contentSource,
+            punishmentsEnabled: AppState.settings.punishmentsEnabled,
+            autoCycleEnabled: AppState.settings.autoCycleEnabled,
+            autoCycleInterval: AppState.settings.autoCycleInterval,
+            theme: AppState.settings.theme,
+            redditCredentials: AppState.settings.redditCredentials,
+            
+            // Timer and metronome settings
+            timerMin: AppState.settings.timerMin || 30,
+            timerMax: AppState.settings.timerMax || 120,
+            metronomeSpeed: AppState.settings.metronomeSpeed || 60,
+            
+            // Sound settings
+            soundEnabled: localStorage.getItem('soundEnabled') !== 'false',
+            
+            // Stats
+            stats: {
+                favoritesCompletedCount: AppState.stats.favoritesCompletedCount,
+                punishmentsCompletedCount: AppState.stats.punishmentsCompletedCount
+            },
+            
+            // Enabled folders
+            enabledContentFolders: AppState.settings.enabledContentFolders || [],
+            enabledPunishmentFolders: AppState.settings.enabledPunishmentFolders || []
+        };
+        
+        // Save settings to localStorage as a backup
+        localStorage.setItem('goonAppSettings', JSON.stringify(settings));
+        
+        // Send settings to server
+        const response = await fetch('/save_settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to save settings: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        console.log('Settings saved successfully to server and localStorage');
+        return true;
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        
+        // Show error message if UI module is loaded
+        if (GoonApp.UI.showError) {
+            GoonApp.UI.showError(`Failed to save settings: ${error.message}`);
+        } else {
+            alert(`Failed to save settings: ${error.message}`);
+        }
+        
+        return false;
+    }
+}
+},
+
+// Legacy functions for backward compatibility
+async function loadFromStorage() {
+    return await GoonApp.Storage.loadFromStorage();
+}
+
+async function saveToStorage() {
+    return await GoonApp.Storage.saveToStorage();
+}
+
+export default GoonApp.Storage;
