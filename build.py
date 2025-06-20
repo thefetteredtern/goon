@@ -491,12 +491,98 @@ def create_version_info():
     
     return version_info
 
+def scan_for_secrets():
+    """Scan for secrets using custom patterns from custom-secrets.txt"""
+    print("Scanning for secrets in source code using custom patterns...")
+    try:
+        # Define paths
+        src_path = '.\\src'
+        custom_secrets_path = '.\\custom-secrets.txt'
+        
+        # Check if custom-secrets.txt exists
+        if not os.path.exists(custom_secrets_path):
+            print(f"Warning: {custom_secrets_path} not found. Cannot scan for custom secrets.")
+            print("Skipping secret scan. Proceeding with build...")
+            return True
+            
+        # Read patterns from custom-secrets.txt
+        with open(custom_secrets_path, 'r') as f:
+            patterns = [line.strip() for line in f if line.strip()]
+        
+        if not patterns:
+            print("No patterns found in custom-secrets.txt. Skipping secret scan.")
+            return True
+            
+        print(f"Loaded {len(patterns)} pattern(s) from custom-secrets.txt")
+        
+        # Build PowerShell command to scan for each pattern
+        ps_script = """
+        $ErrorActionPreference = 'Stop'
+        $secretsFound = $false
+        $sourcePath = '{src_path}'
+        $patterns = @({pattern_array})
+        
+        foreach ($pattern in $patterns) {{
+            Write-Host "Scanning for pattern: $pattern..."
+            $results = Get-ChildItem -Path $sourcePath -Recurse -File | Select-String -Pattern $pattern -SimpleMatch
+            if ($results) {{
+                Write-Host "SECRET DETECTED: Pattern found in:" -ForegroundColor Red
+                foreach ($result in $results) {{
+                    Write-Host "  $($result.Path):$($result.LineNumber)" -ForegroundColor Red
+                }}
+                $secretsFound = $true
+            }}
+        }}
+        
+        if ($secretsFound) {{
+            Write-Error "Secrets matching patterns in custom-secrets.txt were detected! Build aborted."
+            exit 1
+        }} else {{
+            Write-Host "No secrets matching custom patterns were found." -ForegroundColor Green
+        }}
+        """
+        
+        # Format the pattern array for PowerShell
+        pattern_array = "'" + "', '".join(patterns) + "'"
+        ps_script = ps_script.format(src_path=src_path, pattern_array=pattern_array)
+        
+        print("Running custom secret scan...")
+        result = subprocess.run(['powershell', '-Command', ps_script], capture_output=True, text=True)
+        
+        # Print output for debugging
+        if result.stdout:
+            print(result.stdout)
+        
+        # Check if the command was successful
+        if result.returncode != 0:
+            print("Secret scan detected secrets or failed with error:")
+            if result.stderr:
+                print(result.stderr)
+            return False
+        else:
+            print("No secrets matching custom patterns were detected. Proceeding with build...")
+            return True
+    except Exception as e:
+        print(f"Error running secret scanner: {str(e)}")
+        print("WARNING: Secret scanning was skipped. Proceeding with build...")
+        # Return True to continue the build process even if the scanner fails
+        # You may want to change this to False if you want to be strict about scanning
+        return True
+
 def main():
     """Main build process"""
     print("Starting build process for Goon v2.0...")
     
     # Clean previous build artifacts
     clean_build_directories()
+    
+    # Scan for secrets
+    if not scan_for_secrets():
+        print("\nBuild aborted due to secrets detected in source code.")
+        print("Please remove any secrets and try again.")
+        print("\nPress Enter to exit...")
+        input()
+        return
     
     # Backup credentials if they exist
     had_credentials = backup_credentials()
