@@ -508,13 +508,10 @@ GoonApp.Content = {
             // Check if this is a gallery post
             const isGalleryPost = Array.isArray(data.gallery_images) && data.gallery_images.length > 1;
             
-            // Only add title for non-gallery posts
-            if (!isGalleryPost && (data.title || data.post_title)) {
-                const title = document.createElement('h3');
-                title.textContent = data.title || data.post_title;
-                title.className = 'content-title mt-2';
-                contentContainer.appendChild(title);
-            }
+            // Intentionally skip adding a title for inline image/gif content to maximise viewing area
+            // Previously we displayed the post title here, but it often obstructs or pushes the media
+            // making it hard to view. Titles are still shown when content opens in its own window.
+            
             
             // Only add source for non-gallery posts
             if (!isGalleryPost && (data.source || data.subreddit)) {
@@ -942,13 +939,8 @@ GoonApp.Content = {
                 contentContainer.appendChild(errorMsg);
             }
             
-            // Add title if available
-            if (data.title) {
-                const title = document.createElement('h3');
-                title.textContent = data.title;
-                title.className = 'content-title mt-2';
-                contentContainer.appendChild(title);
-            }
+            // Skip adding a title for inline video/gif content for the same reason as images.
+            
             
             // Add source if available
             if (data.source) {
