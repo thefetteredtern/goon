@@ -150,6 +150,9 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats-settings" type="button" role="tab">Stats</button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link text-warning" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai-settings" type="button" role="tab"><i class="bi bi-robot me-1"></i>AI</button>
+                        </li>
                     </ul>
                     <div class="tab-content">
                         <!-- API Settings Tab -->
@@ -327,7 +330,42 @@
                                 </select>
                             </div>
                         </div>
-                        <!-- Stats Settings Tab -->
+                        <!-- AI Settings Tab -->
+<div class="tab-pane fade" id="ai-settings" role="tabpanel">
+  <div class="alert alert-warning m-3">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <strong>Experimental Feature:</strong> AI Captions are highly experimental and may not work reliably. 
+    Requires a local Ollama installation with compatible models.
+  </div>
+  <div class="card-header bg-warning bg-opacity-25">
+    <h5 class="mb-0"><i class="bi bi-robot me-2"></i>AI Size Teasing</h5>
+  </div>
+  <div class="card-body">
+    <div class="form-check form-switch mb-3">
+      <input class="form-check-input" type="checkbox" id="enableAITeasing">
+      <label class="form-check-label" for="enableAITeasing">Enable AI-Based Size Teasing Captions</label>
+    </div>
+    <div class="mb-3">
+      <label for="penisSize" class="form-label">Penis Size (inches)</label>
+      <input type="number" class="form-control" id="penisSize" min="1" max="20" step="0.1" placeholder="e.g. 6">
+    </div>
+    <div class="mb-3">
+      <label for="ollamaModel" class="form-label">Ollama Model Name</label>
+      <input type="text" class="form-control" id="ollamaModel" placeholder="mistral:instruct">
+      <div class="form-text">Leave blank for default (mistral:instruct)</div>
+    </div>
+    <div class="mb-3">
+      <label for="aiPromptTemplate" class="form-label">Custom Prompt Template (optional)</label>
+      <textarea class="form-control" id="aiPromptTemplate" rows="3" placeholder="Use [SIZE] token to insert size"></textarea>
+    </div>
+    <div class="alert alert-info mb-0">
+      LLM captions require a local <code>ollama</code> model.<br>
+      Install with <code>ollama pull mistral:instruct</code> or specify your own.
+    </div>
+  </div>
+</div>
+</div>
+<!-- Stats Settings Tab -->
                         <div class="tab-pane fade" id="stats-settings" role="tabpanel">
                             <div class="mb-3">
                                 <h5>Cum Stats</h5>
