@@ -221,6 +221,65 @@ def save_settings_route():
 def import_settings_route():
     return import_settings()
 
+@app.route('/generate_caption', methods=['POST'])
+def generate_caption_route():
+    """Generate an erotic teasing caption using a local Ollama model."""
+    try:
+        data = request.json or {}
+        size = data.get('penis_size', '').strip()
+        template = data.get('prompt_template', '')
+        model = data.get('model', 'mistral:instruct').strip() or 'mistral:instruct'
+
+        # Default prompt template
+        default_template = (
+            "User has a [SIZE]-inch penis. Write a short, erotic teasing caption for a sexy image being shown *because of their size*. The tone should be flirtatious, dominant, or lightly humiliating depending on the size."
+            "Always imply that the user received this specific post *because of* their size as a reward, punishment, or mockery."
+            "Speak as a confident domme, never uncertain. Keep the response under 25 words."
+        )
+
+        prompt = (template or default_template).replace('[SIZE]', size or '6')
+
+        import subprocess, shlex
+        try:
+            logger.info(f"Calling Ollama model '{model}' with prompt: {prompt[:60]}…")
+            result = subprocess.run(
+                ["ollama", "run", model, prompt],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=False,
+                timeout=30
+            )
+            if result.returncode != 0:
+                logger.warning(f"Ollama returned non-zero code: {result.stderr}")
+                return jsonify({"caption": ""})
+            raw_bytes = result.stdout or b''
+            try:
+                raw = raw_bytes.decode('utf-8').strip()
+            except UnicodeDecodeError:
+                raw = raw_bytes.decode('utf-8', errors='ignore').strip()
+        except FileNotFoundError:
+            logger.warning("Ollama executable not found – skipping caption generation")
+            return jsonify({"caption": ""})
+        except Exception as e:
+            logger.error(f"Error during Ollama run: {e}")
+            return jsonify({"caption": ""})
+
+        # Sanitize / trim: remove markdown, newlines, >25 words, keep single sentence
+        import re
+        text = re.sub(r"[\r\n]+", " ", raw)
+        text = re.sub(r"[*_`~>|#]", "", text)  # strip simple markdown chars
+        text = text.strip()
+        # Split into sentences
+        sentence = re.split(r"[.!?]", text)[0].strip()
+        words = sentence.split()
+        if len(words) > 25:
+            sentence = " ".join(words[:25])
+        return jsonify({"caption": sentence})
+    except Exception as e:
+        logger.error(f"generate_caption error: {e}")
+        return jsonify({"caption": ""})
+
+
 @app.route('/import_settings_file', methods=['POST'])
 def import_settings_file_route():
     """Handle file upload for settings import"""

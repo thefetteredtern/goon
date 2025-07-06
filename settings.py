@@ -44,6 +44,10 @@ default_user_settings = {
     "enabledContentFolders": [],
     "enabledPunishmentFolders": [],
     "theme": "light",
+    "aiTeasingEnabled": False,
+    "penisSize": "",
+    "ollamaModel": "mistral:instruct",
+    "aiPromptTemplate": "",
     "version": SETTINGS_VERSION,
     "lastUpdated": datetime.now().isoformat()
 }
@@ -125,6 +129,19 @@ def migrate_settings(settings, current_version=SETTINGS_VERSION):
             logger.info("Added default metronomeVolume setting")
         
         migrated['version'] = '1.1'
+    
+    # Migrate from version 1.1 to 1.2 (AI teasing feature)
+    if migrated.get('version') == '1.1':
+        logger.info("Migrating settings from version 1.1 to 1.2 (AI teasing feature)")
+        if 'aiTeasingEnabled' not in migrated:
+            migrated['aiTeasingEnabled'] = False
+        if 'penisSize' not in migrated:
+            migrated['penisSize'] = ""
+        if 'ollamaModel' not in migrated:
+            migrated['ollamaModel'] = "mistral:instruct"
+        if 'aiPromptTemplate' not in migrated:
+            migrated['aiPromptTemplate'] = ""
+        migrated['version'] = '1.2'
     
     # Update to current version
     migrated['version'] = current_version
