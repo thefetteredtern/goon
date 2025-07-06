@@ -114,6 +114,24 @@ GoonApp.Settings = {
             AppState.settings.soundEnabled = soundEnabled;
             console.log('Saving soundEnabled:', soundEnabled);
             
+            // Get AI teasing settings
+            const aiEnabledCheckbox = GoonApp.DOM.$('enableAITeasing');
+            if (aiEnabledCheckbox) {
+                AppState.settings.aiTeasingEnabled = aiEnabledCheckbox.checked;
+            }
+            const penisSizeInput = GoonApp.DOM.$('penisSize');
+            if (penisSizeInput) {
+                AppState.settings.penisSize = penisSizeInput.value.trim();
+            }
+            const ollamaModelInput = GoonApp.DOM.$('ollamaModel');
+            if (ollamaModelInput) {
+                AppState.settings.ollamaModel = ollamaModelInput.value.trim() || 'mistral:instruct';
+            }
+            const aiPromptTemplateInput = GoonApp.DOM.$('aiPromptTemplate');
+            if (aiPromptTemplateInput) {
+                AppState.settings.aiPromptTemplate = aiPromptTemplateInput.value;
+            }
+            
             // Get theme setting
             const themeLightRadio = GoonApp.DOM.$('themeLight');
             const themeDarkRadio = GoonApp.DOM.$('themeDark');

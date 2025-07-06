@@ -90,6 +90,33 @@ GoonApp.Init = {
             });
         }
         
+        // Auto-cycle enable/disable
+        const autoCycleCheckbox = GoonApp.DOM.$('enableAutoCycle');
+        if (autoCycleCheckbox) {
+            autoCycleCheckbox.addEventListener('change', function() {
+                AppState.settings.autoCycleEnabled = this.checked;
+                console.log('Auto-cycle toggled:', this.checked);
+
+                // If turned off, stop any timers immediately
+                if (!this.checked && AppState.timer.interval) {
+                    clearInterval(AppState.timer.interval);
+                    AppState.timer.interval = null;
+                    AppState.timer.seconds = 0;
+                    GoonApp.Timer.updateTimerDisplay();
+                }
+
+                // If turned on and no timer is currently running, start one using saved interval
+                if (this.checked && !AppState.timer.interval) {
+                    const seconds = parseInt(AppState.settings.autoCycleInterval) || 60;
+                    GoonApp.Timer.startTimer(seconds);
+                }
+
+                // Persist the change and update related UI elements
+                GoonApp.UI.updateAutoCycleUI();
+                GoonApp.Storage.saveToStorage();
+            });
+        }
+        
         // Pause timer button
         if (GoonApp.DOM.$('pauseTimerBtn')) {
             GoonApp.DOM.$('pauseTimerBtn').addEventListener('click', function() {
@@ -363,6 +390,24 @@ GoonApp.Init = {
             }
         }
         
+        // Initialize AI teasing settings
+        const aiEnabledCheckbox = GoonApp.DOM.$('enableAITeasing');
+        if (aiEnabledCheckbox) {
+            aiEnabledCheckbox.checked = !!AppState.settings.aiTeasingEnabled;
+        }
+        const penisSizeInput = GoonApp.DOM.$('penisSize');
+        if (penisSizeInput) {
+            penisSizeInput.value = AppState.settings.penisSize || '';
+        }
+        const ollamaModelInput = GoonApp.DOM.$('ollamaModel');
+        if (ollamaModelInput) {
+            ollamaModelInput.value = AppState.settings.ollamaModel || 'mistral:instruct';
+        }
+        const aiPromptTemplateInput = GoonApp.DOM.$('aiPromptTemplate');
+        if (aiPromptTemplateInput) {
+            aiPromptTemplateInput.value = AppState.settings.aiPromptTemplate || '';
+        }
+
         // Initialize metronome sound settings
         const metronomeSoundSelect = GoonApp.DOM.$('metronomeSound');
         if (metronomeSoundSelect) {

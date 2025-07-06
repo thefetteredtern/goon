@@ -351,6 +351,17 @@ GoonApp.Content = {
         const contentContainer = GoonApp.DOM.$('content-container');
         if (!contentContainer) return;
         
+        // Close any previously opened external Reddit window before rendering new content
+        if (AppState.content.redditWindow && !AppState.content.redditWindow.closed) {
+            try {
+                console.log('Closing previous external content window');
+                AppState.content.redditWindow.close();
+            } catch (error) {
+                console.warn('Unable to close previous external content window:', error);
+            }
+            AppState.content.redditWindow = null;
+        }
+
         // Clear existing content
         contentContainer.innerHTML = '';
         
@@ -610,6 +621,40 @@ GoonApp.Content = {
                 // Add gallery container to content container
                 contentContainer.appendChild(galleryContainer);
                 
+                // Generate AI teasing caption if enabled
+                (async () => {
+                    try {
+                        if (AppState.settings.aiTeasingEnabled && data.post_url) {
+                            // Simple cache on AppState
+                            AppState.aiCaptionCache = AppState.aiCaptionCache || {};
+                            if (!AppState.aiCaptionCache[data.post_url]) {
+                                    console.log('Fetching AI caption for', data.post_url);
+                                const resp = await fetch('/generate_caption', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        penis_size: AppState.settings.penisSize || '',
+                                        prompt_template: AppState.settings.aiPromptTemplate || '',
+                                        model: AppState.settings.ollamaModel || 'mistral:instruct'
+                                    })
+                                });
+                                if(!resp.ok){
+                                        console.warn('AI caption fetch failed', resp.status);
+                                    }
+                                    const j = await resp.json();
+                                AppState.aiCaptionCache[data.post_url] = j.caption || '';
+                            }
+                            const captionText = AppState.aiCaptionCache[data.post_url];
+                            if (captionText) {
+                                const captionEl = document.createElement('p');
+                                captionEl.className = 'ai-caption text-center fw-semibold my-2';
+                                captionEl.textContent = captionText;
+                                contentContainer.insertBefore(captionEl, contentContainer.firstChild);
+                            }
+                        }
+                    } catch (e) { console.error('AI caption error', e); }
+                })();
+
                 // Keep track of current image index
                 let currentIndex = 0;
                 
